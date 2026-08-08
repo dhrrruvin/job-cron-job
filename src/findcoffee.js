@@ -2,31 +2,42 @@ import adapters from "./adapters/index.js";
 import { sendJobAlert } from "./nodemailer.js";
 import { keywords } from "./config.js";
 import { loadSeen, saveSeen } from "./store.js";
+import { pool } from "./db.js";
 
 export async function runCheck() {
-  const seen = await loadSeen();
-  const results = await Promise.allSettled(adapters.map(a => a.fetch()));
+  try {
+    const seen = await loadSeen();
+    const results = await Promise.allSettled(adapters.map(a => a.fetch()));
 
-  const newJobs = [];
-  results.forEach((result, i) => {
-    if (result.status === 'rejected') {
-      console.error(`[${adapters[i].name}] failed:`, result.reason.message);
-      return;
-    }
-    for (const job of result.value) {
-      // TODO: find best match
-      const matches = keywords.some(k =>
-        job.title.toLowerCase().includes(k.toLowerCase())
-      );
-      if (matches && !seen.has(job.id)) {
-        newJobs.push(job);
-        seen.add(job.id);
+    const newJobs = [];
+    results.forEach((result, i) => {
+      if (result.status === 'rejected') {
+        console.error(`[${adapters[i].name}] failed:`, result.reason.message);
+        return;
       }
-    }
-  });
+      for (const job of result.value) {
+        // TODO: find best match
+        const matches = keywords.some(k =>
+          job.title.toLowerCase().includes(k.toLowerCase())
+        );
+        if (matches && !seen.has(job.id)) {
+          newJobs.push(job);
+          seen.add(job.id);
+        }
+      }
+    });
 
-  if (newJobs.length) await sendJobAlert(newJobs);
-  await saveSeen(seen);
+    if (newJobs.length) {
+      await sendJobAlert(newJobs);
+      console.log(`Sent alert for ${newJobs.length} new job(s)`);
+    } else {
+      console.log('No new jobs this run');
+    }
+    await saveSeen(newJobs);
+    await pool.end();
+  } catch (error) {
+    console.error("Error in runCheck:", error);
+  }
 }
 
 await runCheck();

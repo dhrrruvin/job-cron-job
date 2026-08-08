@@ -1,29 +1,36 @@
 import fs from 'fs';
 import path from 'path';
-
-const FILE = path.join(path.dirname(""), 'data/seen-jobs.json');
+import { pool } from "./db.js";
 
 export async function loadSeen() {
   try {
-    console.log("reading file ...");
-    const data = await fs.readFileSync(FILE, 'utf-8');
-    console.log("file read successfully");
-    return new Set(JSON.parse(data));
+    const { rows } = await pool.query('SELECT id FROM seen_jobs');
+    return new Set(rows.map(r => r.id));
   } catch (error) {
-    console.log("error reading file,", error.message);
-    return new Set();
+    console.log("error fetching data, ", error);
+    throw error;
   }
 }
 
-export async function saveSeen(seenSet) {
+export async function saveSeen(jobs) {
   try {
-    console.log("creating directory...");
-    await fs.mkdirSync(path.dirname(FILE), { recursive: true });
-    console.log("directory created successfully");
-    console.log("writing to file...");
-    await fs.writeFileSync(FILE, JSON.stringify([...seenSet], null, 2), { encoding: 'utf-8' });
-    console.log("file written successfully");
+    if (!jobs.length) return;
+
+    const values = [];
+    const placeholders = jobs.map((job, i) => {
+      const offset = i * 6;
+      values.push(job.id, job.company, job.title, job.location || null, job.url, job.postedDate || null);
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6})`;
+    });
+
+    const query = `
+    INSERT INTO seen_jobs (job_id, company, title, location, url, posted_date)
+    VALUES ${placeholders.join(', ')}
+    ON CONFLICT (job_id) DO NOTHING
+    `;
+
+    await pool.query(query, values);
   } catch (error) {
-    console.log("error writing to file, ", error.message);
+    console.log("error writing to database, ", error.message);
   }
 }
