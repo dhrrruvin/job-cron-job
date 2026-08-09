@@ -1,0 +1,32 @@
+name: Alert
+
+on:
+  schedule:
+    - cron: ${{ secrets.CRON_SCHEDULE }}
+
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run job scraper
+        run: node src/findcoffee.js
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          EMAIL: ${{ secrets.EMAIL }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          JPMC_URL: ${{ secrets.JPMC_URL }}
