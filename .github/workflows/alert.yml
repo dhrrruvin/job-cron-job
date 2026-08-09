@@ -2,7 +2,7 @@ name: Alert
 
 on:
   schedule:
-    - cron: ${{ secrets.CRON_SCHEDULE }}
+    - cron: "*/30 9,10-18 * * 1-5"
 
   workflow_dispatch:
 
