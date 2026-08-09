@@ -1,31 +1,12 @@
-name: Alert
+name: Test Schedule
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: "*/5 * * * *"
+  workflow_dispatch:
 
 jobs:
-  run-script:
+  test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run job scraper
-        run: node src/findcoffee.js
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          EMAIL: ${{ secrets.EMAIL }}
-          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
-          JPMC_URL: ${{ secrets.JPMC_URL }}
+      - run: echo "Scheduled workflow is working"
