@@ -5,7 +5,6 @@ import { pool } from "./db.js";
 export async function loadSeen() {
   try {
     const { rows } = await pool.query('SELECT job_id FROM seen_jobs');
-    console.log("found data: ", rows);
     return new Set(rows.map(r => r.job_id));
   } catch (error) {
     console.log("error fetching data, ", error);
@@ -29,7 +28,6 @@ export async function saveSeen(jobs) {
     VALUES ${placeholders.join(', ')}
     ON CONFLICT (job_id) DO NOTHING
     `;
-    console.log("writing to db: ", query, values);
     await pool.query(query, values);
   } catch (error) {
     console.log("error writing to database, ", error.message);
